@@ -1,0 +1,59 @@
+from flask import Flask, render_template, request, jsonify
+from datetime import date
+import mysql.connector
+app = Flask(__name__)
+# Database connection
+db = mysql.connector.connect(
+ host="localhost",
+ user="root",
+ password="",
+ database="attendance_system"
+)
+cursor = db.cursor(dictionary=True)
+# Home
+@app.route("/")
+def home():
+ return render_template("index.html")
+# Manage Classes
+@app.route("/add_class", methods=["POST"])
+def add_class():
+ cname = request.json["class_name"]
+ cursor.execute("INSERT INTO classes (name) VALUES (%s)", (cname,))
+ db.commit()
+ return jsonify({"message": "Class added successfully!"})
+@app.route("/get_classes")
+def get_classes():
+ cursor.execute("SELECT * FROM classes")
+ return jsonify(cursor.fetchall())
+# Manage Students
+@app.route("/add_student", methods=["POST"])
+def add_student():
+ data = request.json
+ cursor.execute("INSERT INTO students (roll, name, class_name) VALUES (%s,%s,%s)",
+18
+ (data["roll"], data["name"], data["class_name"]))
+ db.commit()
+ return jsonify({"message": "Student added successfully!"})
+@app.route("/get_students")
+def get_students():
+ cursor.execute("SELECT * FROM students")
+ return jsonify(cursor.fetchall())
+@app.route("/get_students/<cls>")
+def get_students_by_class(cls):
+ cursor.execute("SELECT * FROM students WHERE class_name=%s", (cls,))
+ return jsonify(cursor.fetchall())
+# Attendance
+@app.route("/save_attendance", methods=["POST"])
+def save_attendance():
+ data = request.json["data"]
+ today = str(date.today())
+ for s in data:
+ cursor.execute("INSERT INTO attendance (roll, status, date) VALUES (%s,%s,%s)",
+ (s["roll"], s["status"], today))
+ db.commit()
+ return jsonify({"message": "Attendance saved!"})
+@app.route("/get_history")
+def get_history():
+ cursor.execute("SELECT * FROM attendance ORDER BY date DESC")
+ return jsonify(cursor.fetchall())
+if __name__ == "__main__":
