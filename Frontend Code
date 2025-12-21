@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>AttendanceTracker - Student Attendance Management</title>
+ <link href="https://cdnjs.cloudflare.com/ajax/libs/fontawesome/6.4.0/css/all.min.css" rel="stylesheet">
+ <style>
+ /* --- CSS --- */
+ body {
+ margin: 0;
+ font-family: 'Segoe UI', sans-serif;
+ background-color: #0f172a;
+ color: #e2e8f0;
+ }
+ header {
+ background-color: #1e293b;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 15px 25px;
+ color: #fff;
+ }
+ nav a {
+ color: #cbd5e1;
+ text-decoration: none;
+ margin: 0 15px;
+ }
+ nav a:hover {
+ color: #38bdf8;
+ }
+ .container {
+ padding: 30px;
+ }
+ .card {
+ background-color: #1e293b;
+ padding: 20px;
+ border-radius: 12px;
+11
+ margin-bottom: 20px;
+ box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+ }
+ input, select {
+ background-color: #334155;
+ border: 1px solid #475569;
+ border-radius: 6px;
+ color: #e2e8f0;
+ padding: 6px;
+ }
+ button {
+ border: none;
+ background-color: #2563eb;
+ color: #fff;
+ border-radius: 8px;
+ padding: 8px 14px;
+ cursor: pointer;
+ }
+ button:hover {
+ background-color: #1d4ed8;
+ }
+ .student-card {
+ background-color: #334155;
+ border-radius: 10px;
+ padding: 15px;
+ margin: 10px;
+ display: inline-block;
+ width: 220px;
+ }
+ .present-btn {
+ background-color: #16a34a;
+ color: white;
+ }
+ .absent-btn {
+ background-color: #dc2626;
+ color: white;
+ }
+ table {
+ width: 100%;
+ border-collapse: collapse;
+ margin-top: 15px;
+ }
+ th, td {
+ border: 1px solid #475569;
+12
+ padding: 8px;
+ text-align: left;
+ }
+ </style>
+</head>
+<body>
+ <header>
+ <div><i class="fa-solid fa-graduation-cap"></i> AttendanceTracker</div>
+ <nav>
+ <a href="#" onclick="showSection('classes')">Manage Classes</a>
+ <a href="#" onclick="showSection('students')">Manage Students</a>
+ <a href="#" onclick="showSection('attendance')">Mark Attendance</a>
+ <a href="#" onclick="showSection('history')">View History</a>
+ </nav>
+ </header>
+ <div class="container">
+ <div class="card" id="classes">
+ <h2>Manage Classes</h2>
+ <input type="text" id="className" placeholder="Enter Class Name">
+ <button onclick="addClass()">Add Class</button>
+ <table id="classTable">
+ <thead><tr><th>Class ID</th><th>Class Name</th></tr></thead>
+ <tbody></tbody>
+ </table>
+ </div>
+ <div class="card" id="students" style="display:none;">
+ <h2>Manage Students</h2>
+ <input type="text" id="studentName" placeholder="Student Name">
+ <input type="text" id="rollNo" placeholder="Roll No">
+ <select id="classSelect"></select>
+ <button onclick="addStudent()">Add Student</button>
+ <table id="studentTable">
+ <thead><tr><th>Roll</th><th>Name</th><th>Class</th></tr></thead>
+ <tbody></tbody>
+ </table>
+ </div>
+ <div class="card" id="attendance" style="display:none;">
+ <h2>Mark Attendance</h2>
+ <p>Date: <span id="date"></span></p>
+ <select id="attClassSelect"></select>
+ <button onclick="loadStudents()">Load Students</button>
+ <div id="studentList"></div>
+13
+ <button onclick="markAll('present')">Mark All Present</button>
+ <button onclick="markAll('absent')">Mark All Absent</button>
+ <button onclick="saveAttendance()">Save Attendance</button>
+ </div>
+ <div class="card" id="history" style="display:none;">
+ <h2>Attendance History</h2>
+ <table id="historyTable">
+ <thead><tr><th>Date</th><th>Roll</th><th>Status</th></tr></thead>
+ <tbody></tbody>
+ </table>
+ <button onclick="loadHistory()">Refresh</button>
+ </div>
+ </div>
+ <script>
+ // --- JAVASCRIPT ---
+ document.getElementById("date").innerText = new
+Date().toISOString().slice(0,10);
+ function showSection(id) {
+ document.querySelectorAll(".card").forEach(c => c.style.display = "none");
+ document.getElementById(id).style.display = "block";
+ }
+ // === CLASSES ===
+ function addClass() {
+ const cname = document.getElementById("className").value.trim();
+ if (!cname) return alert("Enter class name!");
+ // MOCK API CALL: This will fail without a backend.
+ fetch("/add_class", {
+ method: "POST",
+ headers: {"Content-Type": "application/json"},
+ body: JSON.stringify({class_name: cname})
+ }).then(r => r.json()).then(data => {
+ alert(data.message);
+ loadClasses();
+ }).catch(err => alert("Error: Could not connect to the backend."));
+ }
+ function loadClasses() {
+ // MOCK API CALL: This will fail without a backend.
+ fetch("/get_classes").then(r=>r.json()).then(data=>{
+ const tbody = document.querySelector("#classTable tbody");
+ const select = document.getElementById("classSelect");
+14
+ const attSelect = document.getElementById("attClassSelect");
+ tbody.innerHTML = select.innerHTML = attSelect.innerHTML = "";
+ data.forEach(c=>{
+ tbody.innerHTML += `<tr><td>${c.id}</td><td>${c.name}</td></tr>`;
+ select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+ attSelect.innerHTML += `<option
+value="${c.name}">${c.name}</option>`;
+ });
+ }).catch(err => console.log("Could not load classes from backend."));
+ }
+ function addStudent() {
+ const sname = document.getElementById("studentName").value;
+ const roll = document.getElementById("rollNo").value;
+ const cls = document.getElementById("classSelect").value;
+ if(!sname || !roll || !cls) return alert("Enter all details!");
+ // MOCK API CALL: This will fail without a backend.
+ fetch("/add_student", {
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({name:sname, roll:roll, class_name:cls})
+ }).then(r=>r.json()).then(d=>{
+ alert(d.message);
+ loadStudentsList();
+ }).catch(err => alert("Error: Could not connect to the backend."));
+ }
+ let students = [];
+ function loadStudents() {
+ const cls = document.getElementById("attClassSelect").value;
+ // MOCK API CALL: This will fail without a backend.
+ fetch(`/get_students/${cls}`).then(r=>r.json()).then(data=>{
+ students = data;
+ const list = document.getElementById("studentList");
+ list.innerHTML = "";
+ students.forEach(s=>{
+ list.innerHTML += `
+ <div class='student-card' id='card-${s.roll}'>
+ <strong>${s.name}</strong><br>Roll: ${s.roll}<br>
+ <em id='status-${s.roll}'>Unknown</em><br>
+ <button class='present-btn'
+onclick="mark('${s.roll}','Present')">Present</button>
+ <button class='absent-btn'
+onclick="mark('${s.roll}','Absent')">Absent</button>
+ </div>`;
+15
+ });
+ }).catch(err => alert("Error: Select a class and ensure backend is running."));
+ }
+ function mark(roll, status) {
+ const statusElem = document.getElementById(`status-${roll}`);
+ const card = document.getElementById(`card-${roll}`);
+
+if(status=="Present"){card.classList.add("present");card.classList.remove("absent");}
+ else{card.classList.add("absent");card.classList.remove("present");}
+ statusElem.innerText = status;
+ }
+ function markAll(status){
+ students.forEach(s=>mark(s.roll,status=="present"?"Present":"Absent"));
+ }
+ function saveAttendance(){
+ const records = students.map(s=>{
+ const st = document.getElementById(`status-${s.roll}`).innerText;
+ return {roll:s.roll, status:st};
+ });
+ // MOCK API CALL: This will fail without a backend.
+ fetch("/save_attendance", {
+ method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({data:records})
+ }).then(r=>r.json()).then(d=>alert(d.message))
+ .catch(err => alert("Error: Could not save attendance to backend."));
+ }
+ // === HISTORY ===
+ function loadHistory(){
+ // MOCK API CALL: This will fail without a backend.
+ fetch("/get_history").then(r=>r.json()).then(data=>{
+ const tbody=document.querySelector("#historyTable tbody");
+ tbody.innerHTML="";
+ data.forEach(r=>{
+
+tbody.innerHTML+=`<tr><td>${r.date}</td><td>${r.roll}</td><td>${r.status}</td></tr
+>`;
+ });
+ }).catch(err => console.log("Could not load history from backend."));
+ }
+16
+ // Initial load (will show empty tables without a backend)
+ loadClasses();
+ loadStudentsList();
+ </script>
+</body>
+</html>
